@@ -2,6 +2,9 @@ s3_bucket="upgrad-nimesh"
 myname="Nimesh"
 timestamp=$(date '+%d%m%Y-%H%M%S')
 
+echo "Start of Automation.sh File"
+echo "==========================="
+
 echo "=>  Upadting packages.."
 sudo apt update -y
 echo "Package update successfull."
@@ -44,4 +47,33 @@ fi
 echo "=> Uploading tar file to s3 bucket.."
 aws s3 cp /tmp/${myname}-httpd-logs-${timestamp}.tar s3://${s3_bucket}/${myname}-httpd-logs-${timestamp}.tar
 echo "Upload successfull."
+
+echo "=> Checking if inventory.html file exit at location /var/www/html/.."
+file=/var/www/html/inventory.html
+file_size=$(ls -lh | awk '{print $5}')
+if [ -e "$file" ]
+then
+	echo "File exists."
+	echo "Appending data.."
+	echo "httpd-logs	$timestamp	tar	$file_size" >> /var/www/html/inventory.html
+else 
+	echo "File does not exist."
+	echo "Creating invrntory.html file.."
+	( echo '<html> <head><title>Logs</title></head><body><Table><tr><td><u>Logs Type</u>&emsp;</td> <td><u>Date Created</u>&emsp;</td> <td><u>Type</u>&emsp;</td> <td><u>Size</u>&emsp;</td> </tr> </Table></body></html>') > /var/www/html/inventory.html
+	echo "File created successfully"
+fi 
+
+echo "=> Checking if CRON Job is scheduled.."
+cron_job_file=/etc/cron.d/automation
+if [ -e "$cron_job_file" ]
+then
+	echo "Cron Job is scheduled."
+else
+	echo "Cron Job is not scheduled."
+	echo "Scheduling Cron Job.."
+	echo "5 12 * * * root /root/Automation_Project/automation.sh" > /etc/cron.d/automation
+	echo "Cron Job Scheduled successfully."
+fi
+
+echo "============================"
 echo "End of automation.sh script"
